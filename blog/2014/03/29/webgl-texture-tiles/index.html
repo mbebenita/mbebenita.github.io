@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>WebGL Texture Tiles 2 - Undefined</title>
+  <title>Shumway WebGL Texture Tiles - Undefined</title>
   <meta name="author" content="Michael Bebenita">
 
   
-  <meta name="description" content="
-">
+  <meta name="description" content="One of the difficulties we ran into when building the WebGL backend for Shumway was dealing with large vector shapes. Flash content can have &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://yoursite.com/blog/2014/03/29/webgl-texture-tiles">
+  <link rel="canonical" href="http://mbebenita.github.io/blog/2014/03/29/webgl-texture-tiles">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Undefined" type="application/atom+xml">
@@ -49,7 +48,7 @@
   
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="q" value="site:yoursite.com" />
+    <input type="hidden" name="q" value="site:mbebenita.github.io" />
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
@@ -67,7 +66,7 @@
   
   <header>
     
-      <h1 class="entry-title">WebGL Texture Tiles 2</h1>
+      <h1 class="entry-title">Shumway WebGL Texture Tiles</h1>
     
     
       <p class="meta">
@@ -90,7 +89,157 @@
   </header>
 
 
-<div class="entry-content">
+<div class="entry-content"><p>One of the difficulties we ran into when building the WebGL backend for Shumway was dealing with large vector shapes. Flash content can have arbitrarily sized vector shapes, often times much larger than the viewport. This is especially true when content is scaled.</p>
+
+<p>Rasterizing vector shapes can be quite expensive, so caching rasterized shapes as textures on the GPU is really important. This, however, is not always practical or even possible in some cases. Large shapes don&rsquo;t usually fit in textures. For instance, most mobile devices have limitations on <code>MAX_TEXTURE_SIZE</code>, often no larger than <code>2048 x 2048</code>.</p>
+
+<h2>Cityscape Paralx</h2>
+
+<p>Here&rsquo;s a concrete example to illustrate the problem. Suppose you wanted to create a cityscape paralax effect.
+You would start off adding several large cityscape shapes to your stage and then teweening their scale.</p>
+
+<p><img src="/images/tiles/city-0.png"></p>
+
+<p>The vector shapes are very large, roughly <code>5,000px</code> across at 1:1 scale. After being scaled, they are nearly <code>10,000px</code> across.</p>
+
+<p><img src="/images/tiles/city-1.png"></p>
+
+<p>Workign with excessively large shapes like these may seem inneficient, but it&rsquo;s normal for Flash developers and very convenient. The Flash player has no problem dealing with these.</p>
+
+<p>See the <a href="http://www.areweflashyet.com/shumway/examples/inspector/inspector.html?rfile=http%3A%2F%2Fswf.codeazur.com.br%2Farchive%2Fdb%2F5f%2F8d%2Ff4%2Fdb5f8df47c02c98d7f694ad04342e549d37a9b92fc81dda2a16b0b07e5f17b4d.swf">final result</a>.</p>
+
+<h3>Tiling</h3>
+
+<p>At any one time, only a small portion of the Cityscape is in the viewport. It doesn&rsquo;t make sense to rasterize and cache the entire shape. We can partition the Cityscape into many equally sized tiles and cache only those that intersect the viewport. As new tiles come into view they are rasterized and cached. Similarly, if the shape is scaled, new tiles of a higher quality are generated and cached. If at any point, there is no more texture memory available, old unused tiles are evicted to make room for new ones.</p>
+
+<p><img src="/images/tiles/city-2.png"></p>
+
+<p>This means that cached tiles are no longer arranged in the GPU texture as they used to appear in the original shape. Tiles that used to be adjacent may now be far apart, or even in two different GPU textures.</p>
+
+<p><img src="/images/tiles/tiles.png"></p>
+
+<p>Reassembling the original shape is now a matter of drawing several textured quads that sample from different texture locations. The problem however is that, if we&rsquo;re not careful, we get ugly seeming artifacts.</p>
+
+<h3>Seeming</h3>
+
+<p>Let&rsquo;s focus on tiles <code>9</code> and <code>10</code> and look at how they are drawn by the GPU. During polygon rasterization, the GPU generates fragments for each of the screen pixels that overlap with the geometry. If we do our math right, the GPU will generate fragments that either belong to tile <code>9</code> or tile <code>10</code> along the edge between the two tiles.</p>
+
+<p><img src="/images/tiles/fragments.png"></p>
+
+<h2>Linear Sampling</h2>
+
+<p>TBD:</p>
+
+<p><canvas id="linearSampling" width=512 height=256> </canvas></p>
+
+<script>
+  function addMouseMoveEventHandler(c, fn) {
+    c.addEventListener('mousemove', function(e) {
+      var r = c.getBoundingClientRect();
+      var x = e.clientX - r.left;
+      var y = e.clientY - r.top;
+      fn(x, y);
+    });
+  }
+
+  var canvas = document.getElementById("linearSampling");
+  var ctx = canvas.getContext("2d");
+  ctx.fillStyle = "red";
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  
+  addMouseMoveEventHandler(canvas, function (x, y) {
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    var c0 = {r: 255, g: 0,   b: 0,   a: 1};
+    var c1 = {r: 0,   g: 255, b: 0,   a: 1};
+    var c2 = {r: 0,   g: 0,   b: 255, a: 1};
+    var c3 = {r: 255, g: 165, b: 0,   a: 1};
+
+    function toStyle(c) {
+      return "rgba(" + Math.round(c.r) + ", " + Math.round(c.g) + ", " + Math.round(c.b) + ", " + c.a + ")";
+    }
+
+    var s = 100;
+    ctx.translate(40, 40);
+    x -= 40; y -= 40;
+    ctx.beginPath();
+    ctx.fillStyle = toStyle(c0);
+    ctx.rect(0, 0, s, s);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = toStyle(c1);
+    ctx.rect(s, 0, s, s);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = toStyle(c2);
+    ctx.rect(s, s, s, s);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = toStyle(c3);
+    ctx.rect(0, s, s, s);
+    ctx.fill();
+
+    var x0 = s / 2;       var y0 = s / 2;
+    var x1 = s + s / 2;   var y1 = s / 2;
+    var x2 = s + s / 2;   var y2 = s + s / 2;
+    var x3 = s / 2;       var y3 = s + s / 2;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 1)";
+
+    ctx.beginPath(); ctx.arc(x0, y0, 4, 0, 2 * Math.PI, false); ctx.fill();
+    ctx.beginPath(); ctx.arc(x1, y1, 4, 0, 2 * Math.PI, false); ctx.fill();
+    ctx.beginPath(); ctx.arc(x2, y2, 4, 0, 2 * Math.PI, false); ctx.fill();
+    ctx.beginPath(); ctx.arc(x3, y3, 4, 0, 2 * Math.PI, false); ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";    
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x0, y0);
+    ctx.moveTo(x, y); ctx.lineTo(x1, y1);
+    ctx.moveTo(x, y); ctx.lineTo(x2, y2);
+    ctx.moveTo(x, y); ctx.lineTo(x3, y3);
+    ctx.stroke();
+
+  
+    function interpolate(c0, c1, c2, c3, x, y) {
+      var a = (1 - x) * (1 - y);
+      var b = x * (1 - y);
+      var c = (1 - x) * y;
+      var d = x * y;
+      return {
+        r: c0.r * a + c1.r * b + c3.r * c + c2.r * d,
+        g: c0.g * a + c1.g * b + c3.g * c + c2.g * d,
+        b: c0.b * a + c1.b * b + c3.b * c + c2.b * d,
+        a: c0.a * a + c1.a * b + c3.a * c + c2.a * d
+      }      
+    }
+
+    function clamp(value, min, max) {
+      if (value < min) {
+        return min;
+      } else if (value > max) {
+        return max;
+      }
+      return value;
+    }
+
+    var X = clamp((x - x0) / s, 0, 1);
+    var Y = clamp((y - y0) / s, 0, 1);
+
+    var cr = interpolate(c0, c1, c2, c3, X, Y);
+    ctx.beginPath();
+    ctx.fillStyle = toStyle(cr);
+    ctx.beginPath(); ctx.arc(x, y, 18, 0, 2 * Math.PI, false); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+
+  
+</script>
+
 </div>
 
 
@@ -121,7 +270,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://yoursite.com/blog/2014/03/29/webgl-texture-tiles/" data-via="" data-counturl="http://yoursite.com/blog/2014/03/29/webgl-texture-tiles/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://mbebenita.github.io/blog/2014/03/29/webgl-texture-tiles/" data-via="" data-counturl="http://mbebenita.github.io/blog/2014/03/29/webgl-texture-tiles/" >Tweet</a>
   
   
   
@@ -144,7 +293,7 @@
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2014/03/29/webgl-texture-tiles/">WebGL Texture Tiles 2</a>
+        <a href="/blog/2014/03/29/webgl-texture-tiles/">Shumway WebGL Texture Tiles</a>
       </li>
     
   </ul>
@@ -161,7 +310,7 @@
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Michael Bebenita -
+  Copyright &copy; 2015 - Michael Bebenita -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
