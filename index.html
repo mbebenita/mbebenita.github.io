@@ -6,12 +6,26 @@
 </head>
 
 <body class="hack dark main container">
-  <div id="content">Processing ...</div>
+  <div id="content"></div>
   <script>
-    fetch("index.md").then(function (response) {
+    function getParameterByName(name, url) {
+      if (!url) url = window.location.href;
+      name = name.replace(/[\[\]]/g, "\\$&");
+      var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    let page = getParameterByName("page") || "index.md";
+    document.getElementById("content").innerHTML = `Processing ${page} ...`;
+    fetch(page).then(function (response) {
       var text = response.text().then(function (text) {
         var converter = new showdown.Converter({ tables: true });
         showdown.setFlavor('github');
+        var header = "# MBX\nNotes\n";
+        text = header + text;
         var html = converter.makeHtml(text);
         document.getElementById("content").innerHTML = html;
       });
