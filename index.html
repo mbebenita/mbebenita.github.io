@@ -18,17 +18,43 @@
       return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
+    function loadXHR(path, type) {
+      return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest();
+        let self = this;
+        xhr.open("GET", path, true);
+        xhr.responseType = "text";
+        xhr.send();
+        xhr.addEventListener("load", function () {
+          if (xhr.status != 200) {
+            console.error("Failed to load XHR: " + path);
+            reject();
+            return;
+          }
+          console.info("Loaded XHR: " + path);
+          let response = this.responseText;
+          if (type === "json") {
+            response = response.replace(/NaN/g, "null");
+            try {
+              response = response ? JSON.parse(response) : null;
+            } catch (x) {
+              reject();
+            }
+          }
+          resolve(response);
+        });
+      });
+    }
+
     let page = getParameterByName("page") || "index.md";
     document.getElementById("content").innerHTML = `Processing ${page} ...`;
-    fetch(page).then(function (response) {
-      var text = response.text().then(function (text) {
-        var converter = new showdown.Converter({ tables: true });
-        showdown.setFlavor('github');
-        var header = "# MBX\nNotes\n";
-        text = header + text;
-        var html = converter.makeHtml(text);
-        document.getElementById("content").innerHTML = html;
-      });
+    loadXHR(page, "text").then(function (text) {
+      var converter = new showdown.Converter({ tables: true });
+      showdown.setFlavor('github');
+      var header = "# MBX\nNotes\n";
+      text = header + text;
+      var html = converter.makeHtml(text);
+      document.getElementById("content").innerHTML = html;
     });
   </script>
 </body>
