@@ -1,8 +1,11 @@
 <html>
 
 <head>
-  <script src="https://rawgit.com/showdownjs/showdown/develop/dist/showdown.min.js"></script>
-  <link rel="stylesheet" type="text/css" href="afterdark.css" media="screen" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/monokai-sublime.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script async src="lib/showdown.min.js"></script>
+  <!--<link rel="stylesheet" type="text/css" href="afterdark.css" media="none" onload="if(media!='all')media='all'"/>-->
 </head>
 
 <body class="hack dark main container">
@@ -47,16 +50,32 @@
     }
 
     let page = getParameterByName("page") || "index.md";
+    while (page.endsWith("/")) {
+      page = page.substring(0, page.length - 1);
+    }
     document.getElementById("content").innerHTML = `Processing ${page} ...`;
     loadXHR(page, "text").then(function (text) {
-      var converter = new showdown.Converter({ tables: true });
-      showdown.setFlavor('github');
-      var header = "# MBX\nNotes\n";
-      text = header + text;
-      var html = converter.makeHtml(text);
-      document.getElementById("content").innerHTML = html;
+      function render() {
+        if (typeof showdown !== "undefined") {
+          var converter = new showdown.Converter({ tables: true });
+          showdown.setFlavor('github');
+          var header = "# Michael Bebenita (MBX)\n[Home](/)\n";
+          text = header + text;
+          var html = converter.makeHtml(text);
+          html += `<hr>Loaded in: ${performance.now().toFixed(2)}ms`;
+          document.getElementById("content").innerHTML = html;
+
+          hljs.initHighlightingOnLoad();
+        } else {
+          setTimeout(render, 0); // Try again until showdown is loaded.
+        }
+      }
+      render();
     });
   </script>
+
+
+
 </body>
 
 </html>

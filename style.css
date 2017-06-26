@@ -1,11 +1,7 @@
-/*Copied from: https://comfusion.github.io/after-dark/*/
-
 html {
   font-size: 12px;
 }
-
 body {
-  font-size: 1rem;
   line-height: 1.5rem;
   margin: 0;
   font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
@@ -43,7 +39,7 @@ p {
 }
 
 .dark, .dark pre {
-  background-color: #212121
+  background-color: #212121;
 }
 
 a[href*="//"]::after {
@@ -52,7 +48,7 @@ a[href*="//"]::after {
 }
 
 .container {
-  max-width: 70rem
+  max-width: 50rem
 }
 
 .container {
@@ -64,22 +60,25 @@ a[href*="//"]::after {
   html {
     font-size: 14px;
   }
-  .container {
-    max-width: 50rem;
-  }
 }
 
-.hack, .hack blockquote, .hack code, .hack em, .hack h1, .hack h2, .hack h3, .hack h4, .hack h5, .hack h6, .hack strong {
+.hack blockquote, .hack em, .hack h1, .hack h2, .hack h3, .hack h4, .hack h5, .hack h6, .hack strong {
   font-size: 14px;
   font-style: normal;
   font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif
 }
 
-.hack blockquote, .hack code, .hack em, .hack strong {
+.hack blockquote,
+/*.hack code,*/
+
+.hack em, .hack strong {
   line-height: 20px
 }
 
-.hack blockquote, .hack code, .hack footer, .hack h1, .hack h2, .hack h3, .hack h4, .hack h5, .hack h6, .hack header, .hack li, .hack ol, .hack p, .hack section, .hack ul {
+.hack blockquote,
+/*.hack code,*/
+
+.hack footer, .hack h1, .hack h2, .hack h3, .hack h4, .hack h5, .hack h6, .hack header, .hack li, .hack ol, .hack p, .hack section, .hack ul {
   float: none;
   margin: 0;
   padding: 0
@@ -214,4 +213,52 @@ a[href*="//"]::after {
   line-height: 20px;
   width: 100%;
   word-wrap: break-word
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.75rem 0;
+  color: #778087
+}
+
+table td, table th {
+  vertical-align: top;
+  border: 1px solid #ccc;
+  line-height: 15px;
+  padding: 10px;
+  font-size: 12px;
+  color: white;
+}
+
+table thead th {
+  font-size: 12px;
+  color: white;
+}
+
+
+/*table tbody td:first-child {
+      font-weight: 700;
+      color: #333
+    }*/
+
+code {
+  font-size: 12px;
+  line-height: 1.2rem;
+  font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
+  border-left: 8px solid #333;
+  margin-left: 8px;
+  padding-left: 8px !important;
+}
+
+.hack pre code:after, .hack pre code:before {
+  content: ''
+}
+
+.hljs {
+  background: transparent;
+}
+
+.hack em {
+  color: #579fff;
 }
